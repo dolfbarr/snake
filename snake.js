@@ -8,7 +8,7 @@ const createCanvas = (config, snake) => {
 
   draw(ctx, config, snake)
 
-  return [ctx]
+  return [ctx, canvas]
 }
 
 const drawLines = (ctx, config) => {
@@ -39,24 +39,89 @@ const draw = (ctx, config, snake) => {
   drawSnake(ctx, config, snake)
 }
 
-const updateSnake = (snake, {cellSize}) => {
-  return [...snake.map(s => ([s[0] + cellSize, s[1]]))]
+const updateSnake = (snake, { cellSize, cellsX, cellsY }, nextActions) => {
+  const UP = ['ArrowUp', 'KeyW']
+  const DOWN = ['ArrowDown', 'KeyS']
+  const LEFT = ['ArrowLeft', 'KeyA']
+  const RIGHT = ['ArrowRight', 'KeyD']
+
+  let updatedSnake = snake
+  const nextAction = nextActions[nextActions.length - 1]
+
+  updatedSnake.shift()
+
+  switch (true) {
+    case RIGHT.includes(nextAction):
+      updatedSnake.push([updatedSnake[updatedSnake.length - 1][0] + cellSize, updatedSnake[updatedSnake.length - 1][1]])
+      break
+    case LEFT.includes(nextAction):
+      updatedSnake.push([updatedSnake[updatedSnake.length - 1][0] - cellSize, updatedSnake[updatedSnake.length - 1][1]])
+      break
+    case UP.includes(nextAction):
+      updatedSnake.push([updatedSnake[updatedSnake.length - 1][0], updatedSnake[updatedSnake.length - 1][1] - cellSize])
+      break
+    case DOWN.includes(nextAction):
+      updatedSnake.push([updatedSnake[updatedSnake.length - 1][0], updatedSnake[updatedSnake.length - 1][1] + cellSize])
+      break
+  }
+
+
+  if (updatedSnake[updatedSnake.length - 1][0] >= cellsX * cellSize ) {
+    return
+  }
+  if (updatedSnake[updatedSnake.length - 1][1] >= cellsY * cellSize) {
+    return
+  }
+  if (updatedSnake[updatedSnake.length - 1][0] < 0 ) {
+    return
+  }
+  if (updatedSnake[updatedSnake.length - 1][1] < 0) {
+    return
+  }
+
+  if ([...new Set(updatedSnake.map(s => s[0].toString() + s[1].toString()))].length != updatedSnake.map(s => s[0].toString() + s[1].toString()).length) {
+    return
+  }
+
+  return updatedSnake
+}
+
+const setKeybindings = (nextActions) =>  {
+  document.addEventListener('keydown', (e) => changeDirection(e, nextActions))
+}
+
+const changeDirection = (e, nextActions) => {
+  nextActions.push(e.code)
+}
+
+
+const stopGame =  (canvas, intervalId) => {
+  canvas.style.borderColor = 'red'
+  clearInterval(intervalId)
+  intervalId = null
 }
 
 const initGame = ({cellSize, initialSnake}) =>  {
   const snake = new Array(initialSnake).fill(null).map((_, i) => ([0 + i * cellSize, 0]))
+  const nextActions = ['ArrowRight']
 
-  return [snake]
+  return [snake, nextActions]
 }
 
 const init = (config) => {
-  let [snake] = initGame(config)
-  const [ctx] = createCanvas(config, snake)
+  let [snake, nextActions] = initGame(config)
+  const [ctx, canvas] = createCanvas(config, snake)
+
+  setKeybindings(nextActions)
 
   let score = config.initialSnake
-  intervalId = setInterval(() => {
-    snake = updateSnake(snake, config)
-    draw(ctx, config, snake)
+  let intervalId = setInterval(function () {
+    snake = updateSnake(snake, config, nextActions)
+    if (snake) {
+      draw(ctx, config, snake)
+    } else {
+      stopGame(canvas, intervalId)
+    }
   }, config.updateTime)
 }
 
@@ -66,9 +131,8 @@ const config = {
   cellsY: 40,
   cellSize: 10,
   initialSnake: 5,
-  updateTime: 1000
+  updateTime: 100
 }
 
-let intervalId
 
-init(config, intervalId)
+init(config)
