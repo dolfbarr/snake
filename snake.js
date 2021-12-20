@@ -115,10 +115,11 @@ const spawnFood = (ctx, config, snake) => {
   return [food]
 }
 
-const stopGame =  (canvas, intervalId) => {
-  canvas.style.borderColor = 'red'
+const stopGame =  (canvas, intervalId, snake, config) => {
+  canvas.style.borderColor = snake.length - 1 === config.cellsX * config.cellsY ? 'green' : 'red'
   clearInterval(intervalId)
   intervalId = null
+  console.info('Snake length: ' + snake.length)
 }
 
 const initGame = ({cellSize, initialSnake}) =>  {
@@ -150,18 +151,18 @@ const init = (config) => {
         score++
       }
     } else {
-      stopGame(canvas, intervalId)
+      stopGame(canvas, intervalId, snake, config)
     }
   }, config.updateTime)
 }
 
 
 const config = {
-  cellsX: 20,
+  cellsX: 30,
   cellsY: 20,
-  cellSize: 10,
-  initialSnake: 2,
-  updateTime: 100
+  cellSize: 30,
+  initialSnake: 4,
+  updateTime: 300
 }
 
 
