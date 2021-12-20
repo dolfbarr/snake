@@ -6,7 +6,7 @@ const createCanvas = (config, snake) => {
   const ctx = canvas.getContext('2d')
   document.body.appendChild(canvas)
 
-  draw(ctx, config, snake)
+  draw(ctx, config, snake, [-Infinity, -Infinity])
 
   return [ctx, canvas]
 }
@@ -27,19 +27,25 @@ const drawLines = (ctx, config) => {
   }
 }
 
-const drawSnake = (ctx, config, snake) => {
+const drawSnake = (ctx, {cellSize}, snake) => {
   ctx.fillStyle = 'black'
   for (let i = 0; i < snake.length; i++) {
-    ctx.fillRect(snake[i][0] + 2, snake[i][1] + 2, config.cellSize - 3,  config.cellSize - 3)
+    ctx.fillRect(snake[i][0] + 2, snake[i][1] + 2, cellSize - 3,  cellSize - 3)
   }
 }
 
-const draw = (ctx, config, snake) => {
-  drawLines(ctx, config)
-  drawSnake(ctx, config, snake)
+const drawFood = (ctx, {cellSize}, food) => {
+  ctx.fillStyle = 'green'
+  ctx.fillRect(food[0] + 2, food[1] + 2, cellSize - 3,  cellSize - 3)
 }
 
-const updateSnake = (snake, { cellSize, cellsX, cellsY }, nextActions) => {
+const draw = (ctx, config, snake, food) => {
+  drawLines(ctx, config)
+  drawSnake(ctx, config, snake)
+  drawFood(ctx, config, food)
+}
+
+const updateSnake = (snake, { cellSize, cellsX, cellsY }, nextActions, food) => {
   const UP = ['ArrowUp', 'KeyW']
   const DOWN = ['ArrowDown', 'KeyS']
   const LEFT = ['ArrowLeft', 'KeyA']
@@ -66,6 +72,8 @@ const updateSnake = (snake, { cellSize, cellsX, cellsY }, nextActions) => {
   }
 
 
+
+
   if (updatedSnake[updatedSnake.length - 1][0] >= cellsX * cellSize ) {
     return
   }
@@ -83,6 +91,10 @@ const updateSnake = (snake, { cellSize, cellsX, cellsY }, nextActions) => {
     return
   }
 
+  if (updatedSnake.map(s => s[0].toString() + s[1].toString()).includes(food[0].toString() + food[1].toString())) {
+    updatedSnake.unshift(food)
+  }
+
   return updatedSnake
 }
 
@@ -94,6 +106,14 @@ const changeDirection = (e, nextActions) => {
   nextActions.push(e.code)
 }
 
+const spawnFood = (ctx, config, snake) => {
+  const FOOD_X = Math.floor(Math.random() * (config.cellsX))
+  const FOOD_Y = Math.floor(Math.random() * (config.cellsY))
+  const food = [FOOD_X * config.cellSize, FOOD_Y * config.cellSize]
+  drawFood(ctx, config, food)
+
+  return [food]
+}
 
 const stopGame =  (canvas, intervalId) => {
   canvas.style.borderColor = 'red'
@@ -112,13 +132,23 @@ const init = (config) => {
   let [snake, nextActions] = initGame(config)
   const [ctx, canvas] = createCanvas(config, snake)
 
+  let [food] = spawnFood(ctx, config, snake)
+
   setKeybindings(nextActions)
 
   let score = config.initialSnake
   let intervalId = setInterval(function () {
-    snake = updateSnake(snake, config, nextActions)
-    if (snake) {
-      draw(ctx, config, snake)
+    let oldSnakeLength = snake.length
+    const newSnake = updateSnake(snake, config, nextActions, food)
+    if (newSnake) {
+      draw(ctx, config, newSnake, food)
+
+      if (newSnake.length != oldSnakeLength) {
+        let [newFood] = spawnFood(ctx, config, newSnake)
+        food = newFood
+        snake = newSnake
+        score++
+      }
     } else {
       stopGame(canvas, intervalId)
     }
@@ -127,10 +157,10 @@ const init = (config) => {
 
 
 const config = {
-  cellsX: 60,
-  cellsY: 40,
+  cellsX: 20,
+  cellsY: 20,
   cellSize: 10,
-  initialSnake: 5,
+  initialSnake: 2,
   updateTime: 100
 }
 
